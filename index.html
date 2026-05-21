@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ma ZIM du jour</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: #0F0F0F;
+      font-family: Georgia, 'Times New Roman', serif;
+      color: #E8E2D9;
+      padding: 32px 20px 60px;
+    }
+
+    .wrap { max-width: 520px; margin: 0 auto; }
+
+    /* Header */
+    .header-row {
+      display: flex; align-items: baseline; justify-content: space-between;
+      margin-bottom: 4px;
+    }
+    .label-zim {
+      font-size: 11px; letter-spacing: 0.25em; text-transform: uppercase;
+      color: #C8A96E; font-family: monospace;
+    }
+    .saved-indicator {
+      font-size: 10px; letter-spacing: 0.15em; color: #6E9E8A;
+      font-family: monospace; text-transform: uppercase;
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .saved-indicator.show { opacity: 1; }
+
+    h1 {
+      font-size: 28px; font-weight: normal; letter-spacing: -0.01em;
+      color: #F0EAE0; margin-bottom: 2px; line-height: 1.1;
+    }
+    .date-str {
+      font-size: 12px; color: #555; font-family: monospace;
+      margin-bottom: 28px; text-transform: capitalize;
+    }
+
+    /* Progress */
+    .progress-row {
+      display: flex; justify-content: space-between; margin-bottom: 8px;
+      font-size: 11px; font-family: monospace; color: #666; letter-spacing: 0.1em;
+    }
+    .progress-pct { color: #C8A96E; transition: color 0.3s; }
+    .progress-pct.done { color: #6E9E8A; }
+    .progress-track {
+      height: 2px; background: #222; border-radius: 1px;
+      overflow: hidden; margin-bottom: 36px;
+    }
+    .progress-bar {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, #C8A96E, #E8C98E);
+      transition: width 0.4s ease, background 0.4s ease;
+    }
+    .progress-bar.done {
+      background: linear-gradient(90deg, #6E9E8A, #A8D4C4);
+    }
+
+    /* Phase */
+    .phase { margin-bottom: 32px; }
+    .phase-header {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 14px; padding-bottom: 10px;
+      border-bottom: 1px solid #1E1E1E;
+    }
+    .phase-icon { font-size: 14px; }
+    .phase-name {
+      font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
+      font-family: monospace;
+    }
+    .phase-sub {
+      font-size: 10px; color: #444; font-family: monospace;
+      letter-spacing: 0.1em; margin-top: 2px;
+    }
+
+    /* Tasks */
+    .tasks { display: flex; flex-direction: column; gap: 2px; }
+    .task {
+      display: flex; align-items: flex-start; gap: 14px;
+      padding: 12px 14px; border-radius: 4px;
+      cursor: pointer; transition: background 0.15s ease;
+      user-select: none; -webkit-tap-highlight-color: transparent;
+    }
+    .task:hover { background: #141414; }
+    .task.checked { background: #141414; }
+
+    .checkbox {
+      width: 18px; height: 18px; border-radius: 2px; flex-shrink: 0;
+      border: 1.5px solid #333; background: transparent;
+      display: flex; align-items: center; justify-content: center;
+      margin-top: 1px; transition: all 0.15s ease;
+    }
+    .checkbox svg { display: none; }
+    .task.checked .checkbox svg { display: block; }
+
+    .task-text {
+      font-size: 14px; line-height: 1.5; color: #C8C2BA;
+      transition: all 0.15s ease;
+    }
+    .task.checked .task-text {
+      color: #444; text-decoration: line-through;
+    }
+
+    /* Note */
+    .note-label {
+      font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
+      color: #444; font-family: monospace; margin-bottom: 10px; margin-top: 8px;
+    }
+    textarea {
+      width: 100%; min-height: 80px;
+      background: #141414; border: 1px solid #222;
+      border-radius: 4px; color: #C8C2BA;
+      font-family: Georgia, serif; font-size: 13px; line-height: 1.6;
+      padding: 12px 14px; resize: vertical; outline: none;
+    }
+    textarea::placeholder { color: #333; }
+
+    /* Reset */
+    .reset-wrap { margin-top: 20px; text-align: center; }
+    .reset-btn {
+      background: transparent; border: 1px solid #222;
+      color: #444; font-family: monospace; font-size: 10px;
+      letter-spacing: 0.15em; text-transform: uppercase;
+      padding: 8px 20px; border-radius: 2px; cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .reset-btn:hover { border-color: #444; color: #666; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header-row">
+    <div class="label-zim">Zone d'Impact Maximale</div>
+    <div class="saved-indicator" id="saved">✓ sauvegardé</div>
+  </div>
+  <h1>Ma ZIM du jour</h1>
+  <div class="date-str" id="date-str"></div>
+
+  <div class="progress-row">
+    <span id="progress-count">0 / 9 actions</span>
+    <span class="progress-pct" id="progress-pct">0%</span>
+  </div>
+  <div class="progress-track">
+    <div class="progress-bar" id="progress-bar"></div>
+  </div>
+
+  <!-- Phases -->
+  <div id="phases"></div>
+
+  <!-- Note -->
+  <div class="note-label">Note du jour</div>
+  <textarea id="note" placeholder="Observations, blocages, insights..."></textarea>
+
+  <div class="reset-wrap">
+    <button class="reset-btn" id="reset-btn">Réinitialiser</button>
+  </div>
+
+</div>
+
+<script>
+const PHASES = [
+  {
+    id: "montee",
+    label: "Montée en puissance",
+    icon: "◈",
+    color: "#C8A96E",
+    tasks: [
+      { id: "t1", text: "Revue des dossiers en cours + relances prévues" },
+      { id: "t2", text: "Recherche acquéreurs — matching biens disponibles" },
+      { id: "t3", text: "Collecte des nouveautés (DPE, estimations site, annonces particuliers)" },
+      { id: "t4", text: "Tableau de frappe : numéros à appeler + courriers à préparer" },
+    ],
+  },
+  {
+    id: "action",
+    label: "Action",
+    icon: "◆",
+    color: "#E05C3A",
+    tasks: [
+      { id: "t5", text: "Phoning" },
+      { id: "t6", text: "Bilan phoning + CRM + programmation relances / RDV" },
+      { id: "t7", text: "Préparation des courriers (adresses sans contact)" },
+    ],
+  },
+  {
+    id: "atterrissage",
+    label: "Atterrissage",
+    icon: "◉",
+    color: "#6E9E8A",
+    tasks: [
+      { id: "t8", text: "Bilan global + MAJ CRM" },
+    ],
+  },
+  {
+    id: "deplacement",
+    label: "En déplacement",
+    icon: "→",
+    color: "#8A8AAA",
+    subtitle: "Découplé — selon opportunités de sortie",
+    tasks: [
+      { id: "t9", text: "Dépôt des courriers aux adresses identifiées" },
+    ],
+  },
+];
+
+const ALL_TASKS = PHASES.flatMap(p => p.tasks);
+const TOTAL = ALL_TASKS.length;
+
+// Storage key per day
+function todayKey() {
+  const d = new Date();
+  return `zim-${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+// Load state
+let state = { checked: {}, note: "" };
+try {
+  const raw = localStorage.getItem(todayKey());
+  if (raw) state = JSON.parse(raw);
+} catch {}
+
+// Date display
+function formatDate() {
+  return new Date().toLocaleDateString("fr-FR", {
+    weekday: "long", day: "numeric", month: "long", year: "numeric"
+  });
+}
+document.getElementById("date-str").textContent = formatDate();
+
+// Save
+let saveTimer;
+function save() {
+  try {
+    localStorage.setItem(todayKey(), JSON.stringify(state));
+    const el = document.getElementById("saved");
+    el.classList.add("show");
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => el.classList.remove("show"), 1500);
+  } catch {}
+}
+
+// Update progress
+function updateProgress() {
+  const done = ALL_TASKS.filter(t => state.checked[t.id]).length;
+  const pct = Math.round((done / TOTAL) * 100);
+  document.getElementById("progress-count").textContent = `${done} / ${TOTAL} actions`;
+  const pctEl = document.getElementById("progress-pct");
+  pctEl.textContent = `${pct}%`;
+  pctEl.classList.toggle("done", pct === 100);
+  const bar = document.getElementById("progress-bar");
+  bar.style.width = `${pct}%`;
+  bar.classList.toggle("done", pct === 100);
+}
+
+// Toggle task
+function toggle(id) {
+  state.checked[id] = !state.checked[id];
+  const taskEl = document.getElementById(`task-${id}`);
+  const checkEl = taskEl.querySelector(".checkbox");
+  const color = taskEl.dataset.color;
+  if (state.checked[id]) {
+    taskEl.classList.add("checked");
+    checkEl.style.border = `1.5px solid ${color}`;
+    checkEl.style.background = color;
+  } else {
+    taskEl.classList.remove("checked");
+    checkEl.style.border = "1.5px solid #333";
+    checkEl.style.background = "transparent";
+  }
+  updateProgress();
+  save();
+}
+
+// Render phases
+const phasesEl = document.getElementById("phases");
+PHASES.forEach(phase => {
+  const phaseDiv = document.createElement("div");
+  phaseDiv.className = "phase";
+
+  const header = document.createElement("div");
+  header.className = "phase-header";
+  header.innerHTML = `
+    <span class="phase-icon" style="color:${phase.color}">${phase.icon}</span>
+    <div>
+      <div class="phase-name" style="color:${phase.color}">${phase.label}</div>
+      ${phase.subtitle ? `<div class="phase-sub">${phase.subtitle}</div>` : ""}
+    </div>
+  `;
+  phaseDiv.appendChild(header);
+
+  const tasksDiv = document.createElement("div");
+  tasksDiv.className = "tasks";
+
+  phase.tasks.forEach(task => {
+    const isChecked = !!state.checked[task.id];
+    const taskEl = document.createElement("div");
+    taskEl.className = `task${isChecked ? " checked" : ""}`;
+    taskEl.id = `task-${task.id}`;
+    taskEl.dataset.color = phase.color;
+    taskEl.innerHTML = `
+      <div class="checkbox" style="
+        border: 1.5px solid ${isChecked ? phase.color : "#333"};
+        background: ${isChecked ? phase.color : "transparent"};
+      ">
+        <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+          <path d="M1 4L3.5 6.5L9 1" stroke="#0F0F0F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <span class="task-text">${task.text}</span>
+    `;
+    taskEl.addEventListener("click", () => toggle(task.id));
+    tasksDiv.appendChild(taskEl);
+  });
+
+  phaseDiv.appendChild(tasksDiv);
+  phasesEl.appendChild(phaseDiv);
+});
+
+// Note
+const noteEl = document.getElementById("note");
+noteEl.value = state.note || "";
+noteEl.addEventListener("input", () => {
+  state.note = noteEl.value;
+  save();
+});
+
+// Reset
+document.getElementById("reset-btn").addEventListener("click", () => {
+  if (!confirm("Réinitialiser la ZIM du jour ?")) return;
+  state = { checked: {}, note: "" };
+  ALL_TASKS.forEach(t => {
+    const taskEl = document.getElementById(`task-${t.id}`);
+    const color = taskEl.dataset.color;
+    taskEl.classList.remove("checked");
+    taskEl.querySelector(".checkbox").style.border = "1.5px solid #333";
+    taskEl.querySelector(".checkbox").style.background = "transparent";
+  });
+  noteEl.value = "";
+  updateProgress();
+  save();
+});
+
+updateProgress();
+</script>
+</body>
+</html>
